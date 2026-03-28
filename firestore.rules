@@ -1,0 +1,343 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - displayName: string (optional)
+    //   - email: string (required, email format)
+    //   - role: string (required, enum: admin, manager, engineer, operator)
+    //   - phone: string (optional)
+    //   - company: string (optional)
+    //   - photoURL: string (optional, url format)
+    //
+    // Collection: tasks
+    // Document ID: {taskId}
+    // Fields:
+    //   - title: string (required, < 100 chars)
+    //   - priority: string (required, enum: Alta, Média, Baixa)
+    //   - status: string (required, enum: Pendente, Em curso, Concluída)
+    //   - deadline: string (required, < 20 chars)
+    //   - assignedTo: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: projects
+    // Document ID: {projectId}
+    // Fields:
+    //   - project_name: string (required, < 100 chars)
+    //   - client_name: string (required)
+    //   - total_budget: number (required)
+    //   - status: string (required, enum: active, planning, completed, on_hold)
+    //   - company_id: string (required)
+    //
+    // Collection: materials
+    // Document ID: {materialId}
+    // Fields:
+    //   - name: string (required, < 100 chars)
+    //   - category: string (required)
+    //   - stock: number (required)
+    //   - unit: string (required)
+    //   - minStock: number (required)
+    //   - company_id: string (required)
+    //   - project_id: string (optional)
+    //
+    // Collection: equipment
+    // Document ID: {equipmentId}
+    // Fields:
+    //   - name: string (required, < 100 chars)
+    //   - type: string (required, enum: Pesado, Transporte, Energia, Outros)
+    //   - status: string (required, enum: Operacional, Em Manutenção, Parado)
+    //   - health: number (required, 0-100)
+    //   - location: string (optional)
+    //   - operator: string (optional)
+    //   - nextMaintenance: string (optional)
+    //
+    // Collection: materials
+    // Document ID: {materialId}
+    // Fields:
+    //   - name: string (required, < 100 chars)
+    //   - category: string (required)
+    //   - stock: number (required)
+    //   - unit: string (required)
+    //   - minStock: number (required)
+    //   - price: string (optional)
+    //   - status: string (optional)
+    //   - trend: string (optional, enum: up, down, stable)
+    //
+    // Collection: financial
+    // Document ID: {transactionId}
+    // Fields:
+    //   - type: string (required, enum: Receita, Despesa)
+    //   - category: string (required)
+    //   - amount: number (required)
+    //   - date: string (required)
+    //   - status: string (required, enum: Confirmado, Pendente, Cancelado)
+    //   - description: string (optional)
+    //   - company_id: string (optional)
+    //
+    // Collection: reports
+    // Document ID: {reportId}
+    // Fields:
+    //   - title: string (required)
+    //   - type: string (required, enum: Diário, Semanal, Mensal, Financeiro, Técnico)
+    //   - date: string (required)
+    //   - author: string (required)
+    //   - status: string (required, enum: Concluído, Rascunho, Em Revisão)
+    //   - company_id: string (optional)
+    //
+    // Collection: workers
+    // Document ID: {workerId}
+    // Fields:
+    //   - full_name: string (required)
+    //   - id_number: string (required)
+    //   - category: string (required)
+    //   - status: string (required, enum: Ativo, Férias, Inativo)
+    //   - phone_number: string (required)
+    //   - hire_date: string (required)
+    //   - salary: number (required)
+    //   - company_id: string (optional)
+    //
+    // Collection: issues
+    // Document ID: {issueId}
+    // Fields:
+    //   - title: string (required, < 200 chars)
+    //   - severity: string (required, enum: Crítica, Alta, Média, Baixa)
+    //   - status: string (required, enum: Pendente, Em Resolução, Concluído)
+    //   - project: string (required)
+    //   - date: string (required)
+    //   - author: string (optional)
+    //   - comments: number (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Platform Admin (Global)
+    function isPlatformAdmin() {
+      return isAuthenticated() &&
+        (getUserData().role == 'admin' && getUserData().company_id == 'platform' ||
+          (request.auth.token.email == "simaojeovany4@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    // Check if user belongs to the company
+    function isCompanyMember(companyId) {
+      return isAuthenticated() && getUserData().company_id == companyId;
+    }
+
+    // Check if user is an admin/manager of the company
+    function isCompanyAdmin(companyId) {
+      return isCompanyMember(companyId) && (getUserData().role == 'admin' || getUserData().role == 'manager');
+    }
+
+    // Check if user has access to a specific project
+    function hasProjectAccess(companyId, projectId) {
+      let userData = getUserData();
+      return isCompanyMember(companyId) && (
+        isCompanyAdmin(companyId) || 
+        (projectId in userData.accessible_projects)
+      );
+    }
+
+    // Check if user has permission for a specific module
+    function hasModulePermission(moduleName) {
+      return isAuthenticated() && (
+        getUserData().role == 'admin' || 
+        (moduleName in getUserData().permissions)
+      );
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidCompany(data) {
+      return hasRequiredFields(['name', 'owner_uid']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.owner_uid is string;
+    }
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'role', 'company_id']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['admin', 'manager', 'engineer', 'operator'] &&
+             data.company_id is string &&
+             (!('permissions' in data) || data.permissions is list) &&
+             (!('accessible_projects' in data) || data.accessible_projects is list);
+    }
+
+    function isValidProject(data) {
+      return hasRequiredFields(['project_name', 'client_name', 'total_budget', 'status', 'company_id']) &&
+             data.project_name is string && data.project_name.size() > 0 && data.project_name.size() < 100 &&
+             data.client_name is string &&
+             data.total_budget is number &&
+             data.status in ['active', 'planning', 'completed', 'on_hold'] &&
+             data.company_id is string;
+    }
+
+    function isValidMaterial(data) {
+      return hasRequiredFields(['name', 'category', 'stock', 'unit', 'minStock', 'company_id']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.category is string &&
+             data.stock is number &&
+             data.unit is string &&
+             data.minStock is number &&
+             data.company_id is string;
+    }
+
+    function isValidTask(data) {
+      return hasRequiredFields(['title', 'priority', 'status', 'project_id', 'company_id']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+             data.priority in ['Alta', 'Média', 'Baixa'] &&
+             data.status in ['Pendente', 'Em curso', 'Concluída'] &&
+             data.project_id is string &&
+             data.company_id is string;
+    }
+
+    function isValidEquipment(data) {
+      return hasRequiredFields(['name', 'type', 'status', 'company_id']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.type in ['Pesado', 'Transporte', 'Energia', 'Outros'] &&
+             data.status in ['Operacional', 'Em Manutenção', 'Parado'] &&
+             data.company_id is string;
+    }
+
+    function isValidTransaction(data) {
+      return hasRequiredFields(['type', 'category', 'amount', 'date', 'company_id']) &&
+             data.type in ['Receita', 'Despesa'] &&
+             data.category is string &&
+             data.amount is number &&
+             data.date is string &&
+             data.company_id is string;
+    }
+
+    function isValidReport(data) {
+      return hasRequiredFields(['title', 'type', 'date', 'project_id', 'company_id']) &&
+             data.title is string &&
+             data.type in ['Diário', 'Semanal', 'Mensal', 'Financeiro', 'Técnico'] &&
+             data.date is string &&
+             data.project_id is string &&
+             data.company_id is string;
+    }
+
+    function isValidWorker(data) {
+      return hasRequiredFields(['full_name', 'category', 'company_id']) &&
+             data.full_name is string &&
+             data.category is string &&
+             data.company_id is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /companies/{companyId} {
+      allow read: if isCompanyMember(companyId) || isPlatformAdmin();
+      allow create: if isAuthenticated() && isValidCompany(request.resource.data) && 
+                      request.resource.data.owner_uid == request.auth.uid;
+      allow update: if isCompanyAdmin(companyId) || isPlatformAdmin();
+      allow delete: if isPlatformAdmin();
+    }
+
+    match /users/{uid} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && isOwner(uid);
+      allow update: if (isOwner(uid) && isValidUser(request.resource.data) && (
+                        // If already has a company, can't change it unless platform admin
+                        (resource.data.company_id != 'pending' && request.resource.data.company_id == resource.data.company_id) ||
+                        // If pending, can only join a company they own
+                        (resource.data.company_id == 'pending' && 
+                         get(/databases/$(database)/documents/companies/$(request.resource.data.company_id)).data.owner_uid == request.auth.uid)
+                      )) || 
+                      isCompanyAdmin(resource.data.company_id) || 
+                      isPlatformAdmin();
+    }
+
+    match /projects/{projectId} {
+      allow read: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, projectId);
+      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidProject(request.resource.data);
+      allow update: if isCompanyAdmin(resource.data.company_id) && isValidProject(request.resource.data);
+      allow delete: if isCompanyAdmin(resource.data.company_id) || isPlatformAdmin();
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id);
+      allow create: if isCompanyMember(request.resource.data.company_id) && hasProjectAccess(request.resource.data.company_id, request.resource.data.project_id) && isValidTask(request.resource.data);
+      allow update: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id) && isValidTask(request.resource.data);
+      allow delete: if isCompanyAdmin(resource.data.company_id);
+    }
+
+    match /equipment/{equipmentId} {
+      allow read: if isCompanyMember(resource.data.company_id);
+      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidEquipment(request.resource.data);
+      allow update: if isCompanyAdmin(resource.data.company_id) && isValidEquipment(request.resource.data);
+      allow delete: if isCompanyAdmin(resource.data.company_id);
+    }
+
+    match /financial/{transactionId} {
+      allow read: if isCompanyMember(resource.data.company_id) && hasModulePermission('financial');
+      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidTransaction(request.resource.data);
+      allow update: if isCompanyAdmin(resource.data.company_id) && isValidTransaction(request.resource.data);
+      allow delete: if isCompanyAdmin(resource.data.company_id);
+    }
+
+    match /reports/{reportId} {
+      allow read: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id);
+      allow create: if isCompanyMember(request.resource.data.company_id) && hasProjectAccess(request.resource.data.company_id, request.resource.data.project_id) && isValidReport(request.resource.data);
+      allow update: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id) && isValidReport(request.resource.data);
+      allow delete: if isCompanyAdmin(resource.data.company_id);
+    }
+
+    match /workers/{workerId} {
+      allow read: if isCompanyMember(resource.data.company_id);
+      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidWorker(request.resource.data);
+      allow update: if isCompanyAdmin(resource.data.company_id) && isValidWorker(request.resource.data);
+      allow delete: if isCompanyAdmin(resource.data.company_id);
+    }
+
+    match /materials/{materialId} {
+      allow read: if isCompanyMember(resource.data.company_id) && (!('project_id' in resource.data) || hasProjectAccess(resource.data.company_id, resource.data.project_id));
+      allow create: if isCompanyMember(request.resource.data.company_id) && (!('project_id' in request.resource.data) || hasProjectAccess(request.resource.data.company_id, request.resource.data.project_id)) && isValidMaterial(request.resource.data);
+      allow update: if isCompanyMember(resource.data.company_id) && (!('project_id' in resource.data) || hasProjectAccess(resource.data.company_id, resource.data.project_id)) && isValidMaterial(request.resource.data);
+      allow delete: if isCompanyAdmin(resource.data.company_id);
+    }
+
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "entities": {
+    "Company": {
+      "title": "Company",
+      "description": "A construction company using the platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "owner_uid": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "owner_uid"]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "Information about the user, their role, company, and permissions.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "manager", "engineer", "operator"] },
+        "company_id": { "type": "string", "description": "ID of the company the user belongs to." },
+        "permissions": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "List of accessible modules (e.g., 'projects', 'financial', 'team')."
+        },
+        "accessible_projects": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of project IDs the user can access. Empty means all company projects if admin/manager."
+        },
+        "photoURL": { "type": "string", "format": "url" }
+      },
+      "required": ["uid", "email", "role", "company_id"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A construction project managed by a company.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "progress": { "type": "number" },
+        "status": { "type": "string", "enum": ["Em curso", "Planeamento", "Concluído"] },
+        "company_id": { "type": "string" },
+        "budget": { "type": "number" },
+        "deadline": { "type": "string" }
+      },
+      "required": ["name", "progress", "status", "company_id"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A task associated with a specific project.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "priority": { "type": "string", "enum": ["Alta", "Média", "Baixa"] },
+        "status": { "type": "string", "enum": ["Pendente", "Em curso", "Concluída"] },
+        "deadline": { "type": "string" },
+        "project_id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "assigned_to": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "priority", "status", "project_id", "company_id"]
+    },
+    "Equipment": {
+      "title": "Equipment",
+      "description": "Machinery assigned to projects.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Pesado", "Transporte", "Energia", "Outros"] },
+        "status": { "type": "string", "enum": ["Operacional", "Em Manutenção", "Parado"] },
+        "project_id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "health": { "type": "number" }
+      },
+      "required": ["name", "type", "status", "company_id"]
+    },
+    "FinancialTransaction": {
+      "title": "Financial Transaction",
+      "description": "Revenue or expense for a project or company.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["Receita", "Despesa"] },
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "project_id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["Confirmado", "Pendente", "Cancelado"] }
+      },
+      "required": ["type", "category", "amount", "date", "company_id"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Daily or periodic report for a project.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["Diário", "Semanal", "Mensal", "Financeiro", "Técnico"] },
+        "date": { "type": "string" },
+        "project_id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "author_uid": { "type": "string" },
+        "status": { "type": "string", "enum": ["Concluído", "Rascunho", "Em Revisão"] }
+      },
+      "required": ["title", "type", "date", "project_id", "company_id"]
+    },
+    "Worker": {
+      "title": "Worker",
+      "description": "Personnel assigned to projects or company.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "full_name": { "type": "string" },
+        "category": { "type": "string" },
+        "project_id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["Ativo", "Férias", "Inativo"] }
+      },
+      "required": ["full_name", "category", "company_id"]
+    }
+  },
+  "firestore": {
+    "/companies/{companyId}": {
+      "schema": "Company",
+      "description": "Companies on the platform."
+    },
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles with company and permissions."
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Projects filtered by company_id."
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Tasks filtered by company_id and project_id."
+    },
+    "/equipment/{equipmentId}": {
+      "schema": "Equipment",
+      "description": "Equipment filtered by company_id."
+    },
+    "/financial/{transactionId}": {
+      "schema": "FinancialTransaction",
+      "description": "Financials filtered by company_id."
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Reports filtered by company_id and project_id."
+    },
+    "/workers/{workerId}": {
+      "schema": "Worker",
+      "description": "Workers filtered by company_id."
+    }
+  }
+}
+

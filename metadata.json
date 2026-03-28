@@ -1,0 +1,5 @@
+{
+  "name": "GENESIS CC GEST",
+  "description": "Sistema Integrado de Gestão de Construção Civil e Obras Públicas com Inteligência Artificial.",
+  "requestFramePermissions": ["camera", "geolocation"]
+}
