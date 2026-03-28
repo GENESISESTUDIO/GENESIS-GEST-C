@@ -259,6 +259,15 @@ service cloud.firestore {
              data.company_id is string;
     }
 
+    function isValidIssue(data) {
+      return hasRequiredFields(['title', 'severity', 'status', 'project_id', 'company_id']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.severity in ['Crítica', 'Alta', 'Média', 'Baixa'] &&
+             data.status in ['Pendente', 'Em Resolução', 'Concluído'] &&
+             data.project_id is string &&
+             data.company_id is string;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -286,52 +295,59 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-      allow read: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, projectId);
-      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidProject(request.resource.data);
-      allow update: if isCompanyAdmin(resource.data.company_id) && isValidProject(request.resource.data);
+      allow read: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, projectId) || isPlatformAdmin();
+      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidProject(request.resource.data) || isPlatformAdmin();
+      allow update: if isCompanyAdmin(resource.data.company_id) && isValidProject(request.resource.data) || isPlatformAdmin();
       allow delete: if isCompanyAdmin(resource.data.company_id) || isPlatformAdmin();
     }
 
     match /tasks/{taskId} {
-      allow read: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id);
-      allow create: if isCompanyMember(request.resource.data.company_id) && hasProjectAccess(request.resource.data.company_id, request.resource.data.project_id) && isValidTask(request.resource.data);
-      allow update: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id) && isValidTask(request.resource.data);
-      allow delete: if isCompanyAdmin(resource.data.company_id);
+      allow read: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id) || isPlatformAdmin();
+      allow create: if isCompanyMember(request.resource.data.company_id) && hasProjectAccess(request.resource.data.company_id, request.resource.data.project_id) && isValidTask(request.resource.data) || isPlatformAdmin();
+      allow update: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id) && isValidTask(request.resource.data) || isPlatformAdmin();
+      allow delete: if isCompanyAdmin(resource.data.company_id) || isPlatformAdmin();
     }
 
     match /equipment/{equipmentId} {
-      allow read: if isCompanyMember(resource.data.company_id);
-      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidEquipment(request.resource.data);
-      allow update: if isCompanyAdmin(resource.data.company_id) && isValidEquipment(request.resource.data);
-      allow delete: if isCompanyAdmin(resource.data.company_id);
+      allow read: if isCompanyMember(resource.data.company_id) || isPlatformAdmin();
+      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidEquipment(request.resource.data) || isPlatformAdmin();
+      allow update: if isCompanyAdmin(resource.data.company_id) && isValidEquipment(request.resource.data) || isPlatformAdmin();
+      allow delete: if isCompanyAdmin(resource.data.company_id) || isPlatformAdmin();
     }
 
     match /financial/{transactionId} {
-      allow read: if isCompanyMember(resource.data.company_id) && hasModulePermission('financial');
-      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidTransaction(request.resource.data);
-      allow update: if isCompanyAdmin(resource.data.company_id) && isValidTransaction(request.resource.data);
-      allow delete: if isCompanyAdmin(resource.data.company_id);
+      allow read: if isCompanyMember(resource.data.company_id) && hasModulePermission('financial') || isPlatformAdmin();
+      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidTransaction(request.resource.data) || isPlatformAdmin();
+      allow update: if isCompanyAdmin(resource.data.company_id) && isValidTransaction(request.resource.data) || isPlatformAdmin();
+      allow delete: if isCompanyAdmin(resource.data.company_id) || isPlatformAdmin();
     }
 
     match /reports/{reportId} {
-      allow read: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id);
-      allow create: if isCompanyMember(request.resource.data.company_id) && hasProjectAccess(request.resource.data.company_id, request.resource.data.project_id) && isValidReport(request.resource.data);
-      allow update: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id) && isValidReport(request.resource.data);
-      allow delete: if isCompanyAdmin(resource.data.company_id);
+      allow read: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id) || isPlatformAdmin();
+      allow create: if isCompanyMember(request.resource.data.company_id) && hasProjectAccess(request.resource.data.company_id, request.resource.data.project_id) && isValidReport(request.resource.data) || isPlatformAdmin();
+      allow update: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id) && isValidReport(request.resource.data) || isPlatformAdmin();
+      allow delete: if isCompanyAdmin(resource.data.company_id) || isPlatformAdmin();
     }
 
     match /workers/{workerId} {
-      allow read: if isCompanyMember(resource.data.company_id);
-      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidWorker(request.resource.data);
-      allow update: if isCompanyAdmin(resource.data.company_id) && isValidWorker(request.resource.data);
-      allow delete: if isCompanyAdmin(resource.data.company_id);
+      allow read: if isCompanyMember(resource.data.company_id) || isPlatformAdmin();
+      allow create: if isCompanyAdmin(request.resource.data.company_id) && isValidWorker(request.resource.data) || isPlatformAdmin();
+      allow update: if isCompanyAdmin(resource.data.company_id) && isValidWorker(request.resource.data) || isPlatformAdmin();
+      allow delete: if isCompanyAdmin(resource.data.company_id) || isPlatformAdmin();
     }
 
     match /materials/{materialId} {
-      allow read: if isCompanyMember(resource.data.company_id) && (!('project_id' in resource.data) || hasProjectAccess(resource.data.company_id, resource.data.project_id));
-      allow create: if isCompanyMember(request.resource.data.company_id) && (!('project_id' in request.resource.data) || hasProjectAccess(request.resource.data.company_id, request.resource.data.project_id)) && isValidMaterial(request.resource.data);
-      allow update: if isCompanyMember(resource.data.company_id) && (!('project_id' in resource.data) || hasProjectAccess(resource.data.company_id, resource.data.project_id)) && isValidMaterial(request.resource.data);
-      allow delete: if isCompanyAdmin(resource.data.company_id);
+      allow read: if isCompanyMember(resource.data.company_id) && (!('project_id' in resource.data) || hasProjectAccess(resource.data.company_id, resource.data.project_id)) || isPlatformAdmin();
+      allow create: if isCompanyMember(request.resource.data.company_id) && (!('project_id' in request.resource.data) || hasProjectAccess(request.resource.data.company_id, request.resource.data.project_id)) && isValidMaterial(request.resource.data) || isPlatformAdmin();
+      allow update: if isCompanyMember(resource.data.company_id) && (!('project_id' in resource.data) || hasProjectAccess(resource.data.company_id, resource.data.project_id)) && isValidMaterial(request.resource.data) || isPlatformAdmin();
+      allow delete: if isCompanyAdmin(resource.data.company_id) || isPlatformAdmin();
+    }
+
+    match /issues/{issueId} {
+      allow read: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id) || isPlatformAdmin();
+      allow create: if isCompanyMember(request.resource.data.company_id) && hasProjectAccess(request.resource.data.company_id, request.resource.data.project_id) && isValidIssue(request.resource.data) || isPlatformAdmin();
+      allow update: if isCompanyMember(resource.data.company_id) && hasProjectAccess(resource.data.company_id, resource.data.project_id) && isValidIssue(request.resource.data) || isPlatformAdmin();
+      allow delete: if isCompanyAdmin(resource.data.company_id) || isPlatformAdmin();
     }
 
 

@@ -129,6 +129,23 @@
         "status": { "type": "string", "enum": ["Ativo", "Férias", "Inativo"] }
       },
       "required": ["full_name", "category", "company_id"]
+    },
+    "Issue": {
+      "title": "Issue",
+      "description": "An impediment or issue reported for a project.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "severity": { "type": "string", "enum": ["Crítica", "Alta", "Média", "Baixa"] },
+        "status": { "type": "string", "enum": ["Pendente", "Em Resolução", "Concluído"] },
+        "project_id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "author_uid": { "type": "string" },
+        "date": { "type": "string" },
+        "comments": { "type": "number" }
+      },
+      "required": ["title", "severity", "status", "project_id", "company_id"]
     }
   },
   "firestore": {
@@ -163,6 +180,10 @@
     "/workers/{workerId}": {
       "schema": "Worker",
       "description": "Workers filtered by company_id."
+    },
+    "/issues/{issueId}": {
+      "schema": "Issue",
+      "description": "Issues/Impediments filtered by company_id and project_id."
     }
   }
 }
