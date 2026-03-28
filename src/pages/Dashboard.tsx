@@ -9,7 +9,10 @@ import {
   AlertTriangle,
   ChevronRight,
   FileCheck,
-  Loader2
+  Loader2,
+  Target,
+  Zap,
+  Activity
 } from "lucide-react";
 import { 
   BarChart, 
@@ -21,12 +24,14 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  AreaChart,
+  Area
 } from "recharts";
 import { motion } from "motion/react";
 import { cn } from "../lib/utils";
 import { useFirestore } from "../hooks/useFirestore";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useProject } from "../contexts/ProjectContext";
 
@@ -38,7 +43,7 @@ const financialData = [
 ];
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { currentProjectId } = useProject();
   const { data: projects, loading: loadingProjects, getCollection: getProjects } = useFirestore<any>("projects");
   const { data: team, loading: loadingTeam, getCollection: getTeam } = useFirestore<any>("workers");
@@ -46,7 +51,7 @@ export default function Dashboard() {
   const { data: financial, loading: loadingFinancial, getCollection: getFinancial } = useFirestore<any>("financial");
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.company_id) {
       const unsubProjects = getProjects();
       const unsubTeam = getTeam([], currentProjectId || undefined);
       const unsubIssues = getIssues([], currentProjectId || undefined);
@@ -58,9 +63,9 @@ export default function Dashboard() {
         unsubFinancial();
       };
     }
-  }, [user, currentProjectId, getProjects, getTeam, getIssues, getFinancial]);
+  }, [user, profile?.company_id, currentProjectId, getProjects, getTeam, getIssues, getFinancial]);
 
-  const stats = [
+  const stats = useMemo(() => [
     { 
       label: "Projetos Ativos", 
       value: projects.length.toString().padStart(2, '0'), 
@@ -85,26 +90,26 @@ export default function Dashboard() {
       icon: ShieldAlert, 
       color: "text-red-600", 
       bg: "bg-red-50", 
-      trend: `${issues.filter(i => i.severity === 'Crítica').length} Críticos`,
+      trend: `${issues.filter((i: any) => i.severity === 'Crítica').length} Críticos`,
       loading: loadingIssues
     },
     { 
       label: "Valor Medido", 
-      value: `${(financial.reduce((acc, curr) => acc + (curr.type === 'Receita' ? Number(curr.amount) : -Number(curr.amount)), 0) / 1000000).toFixed(1)}M`, 
+      value: `${(financial.reduce((acc: number, curr: any) => acc + (curr.type === 'Receita' ? Number(curr.amount) : -Number(curr.amount)), 0) / 1000000).toFixed(1)}M`, 
       icon: FileCheck, 
       color: "text-violet-600", 
       bg: "bg-violet-50", 
       trend: "Acumulado",
       loading: loadingFinancial
     },
-  ];
+  ], [projects.length, team.length, issues, financial, loadingProjects, loadingTeam, loadingIssues, loadingFinancial]);
 
-  const issueData = [
-    { name: "Solo Rochoso", value: issues.filter(i => i.type === 'Geotécnico').length || 1, color: "#3B82F6" },
-    { name: "Atraso Chuva", value: issues.filter(i => i.type === 'Climático').length || 1, color: "#EF4444" },
-    { name: "Rede Terceiros", value: issues.filter(i => i.type === 'Logístico').length || 1, color: "#F59E0B" },
-    { name: "Equipamento", value: issues.filter(i => i.type === 'Equipamento').length || 1, color: "#10B981" },
-  ];
+  const issueData = useMemo(() => [
+    { name: "Solo Rochoso", value: issues.filter((i: any) => i.type === 'Geotécnico').length || 1, color: "#3B82F6" },
+    { name: "Atraso Chuva", value: issues.filter((i: any) => i.type === 'Climático').length || 1, color: "#EF4444" },
+    { name: "Rede Terceiros", value: issues.filter((i: any) => i.type === 'Logístico').length || 1, color: "#F59E0B" },
+    { name: "Equipamento", value: issues.filter((i: any) => i.type === 'Equipamento').length || 1, color: "#10B981" },
+  ], [issues]);
 
   return (
     <div className="space-y-8 pb-12">

@@ -15,7 +15,7 @@ import {
   X,
   Loader2
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { cn } from "../lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -63,14 +63,14 @@ export default function Financial() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.company_id) {
       const unsubscribe = getCollection([
         orderBy("date", "desc"),
         limit(50)
       ], currentProjectId || undefined);
       return () => unsubscribe();
     }
-  }, [user, getCollection, currentProjectId]);
+  }, [user, profile?.company_id, getCollection, currentProjectId]);
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,21 +93,23 @@ export default function Financial() {
     });
   };
 
-  const totalReceita = transactions
-    .filter(t => t.type === "Receita" && t.status === "Confirmado")
-    .reduce((acc, t) => acc + t.amount, 0);
-  
-  const totalDespesa = transactions
-    .filter(t => t.type === "Despesa" && t.status === "Confirmado")
-    .reduce((acc, t) => acc + t.amount, 0);
+  const totals = useMemo(() => {
+    const receita = transactions
+      .filter(t => t.type === "Receita" && t.status === "Confirmado")
+      .reduce((acc, t) => acc + t.amount, 0);
+    
+    const despesa = transactions
+      .filter(t => t.type === "Despesa" && t.status === "Confirmado")
+      .reduce((acc, t) => acc + t.amount, 0);
 
-  const saldo = totalReceita - totalDespesa;
+    return { receita, despesa, saldo: receita - despesa };
+  }, [transactions]);
 
-  const stats = [
-    { label: "Saldo Total", value: saldo, icon: DollarSign, color: "blue", trend: "+12.5%" },
-    { label: "Receitas Totais", value: totalReceita, icon: TrendingUp, color: "emerald", trend: "+5.2%" },
-    { label: "Despesas Totais", value: totalDespesa, icon: TrendingDown, color: "red", trend: "-2.1%" },
-  ];
+  const stats = useMemo(() => [
+    { label: "Saldo Total", value: totals.saldo, icon: DollarSign, color: "blue", trend: "+12.5%" },
+    { label: "Receitas Totais", value: totals.receita, icon: TrendingUp, color: "emerald", trend: "+5.2%" },
+    { label: "Despesas Totais", value: totals.despesa, icon: TrendingDown, color: "red", trend: "-2.1%" },
+  ], [totals]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA' }).format(value);

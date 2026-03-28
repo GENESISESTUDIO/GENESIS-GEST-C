@@ -12,15 +12,18 @@ import {
   User,
   ExternalLink,
   X,
-  Loader2
+  Loader2,
+  ShieldAlert,
+  Flag,
+  Activity
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { cn } from "../lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { useFirestore } from "../hooks/useFirestore";
 import { useAuth } from "../contexts/AuthContext";
 import { useProject } from "../contexts/ProjectContext";
-import { orderBy } from "firebase/firestore";
+import { orderBy, limit } from "firebase/firestore";
 
 interface Issue {
   id?: string;
@@ -54,9 +57,10 @@ export default function Issues() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.company_id) {
       const unsubIssues = getCollection([
-        orderBy("date", "desc")
+        orderBy("date", "desc"),
+        limit(100)
       ], currentProjectId || undefined);
       const unsubProjects = getProjects();
       return () => {
@@ -64,7 +68,7 @@ export default function Issues() {
         unsubProjects();
       };
     }
-  }, [user, getCollection, getProjects, currentProjectId]);
+  }, [user, profile?.company_id, getCollection, getProjects, currentProjectId]);
 
   const handleAddIssue = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,19 +96,19 @@ export default function Issues() {
     });
   };
 
-  const stats = [
+  const stats = useMemo(() => [
     { label: "Total Ocorrências", value: issues.length, icon: AlertTriangle, color: "blue" },
-    { label: "Críticas", value: issues.filter(i => i.severity === "Crítica").length, icon: AlertTriangle, color: "red" },
-    { label: "Em Resolução", value: issues.filter(i => i.status === "Em Resolução").length, icon: Clock, color: "amber" },
+    { label: "Críticas", value: issues.filter(i => i.severity === "Crítica").length, icon: ShieldAlert, color: "red" },
+    { label: "Em Resolução", value: issues.filter(i => i.status === "Em Resolução").length, icon: Activity, color: "amber" },
     { label: "Resolvidas", value: issues.filter(i => i.status === "Concluído").length, icon: CheckCircle2, color: "emerald" },
-  ];
+  ], [issues]);
 
-  const filteredIssues = issues.filter(i => {
+  const filteredIssues = useMemo(() => issues.filter(i => {
     const matchesSearch = i.title.toLowerCase().includes(search.toLowerCase()) ||
                          i.project.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filter === "Todas" || i.severity === filter;
     return matchesSearch && matchesFilter;
-  });
+  }), [issues, search, filter]);
 
   return (
     <div className="space-y-8">

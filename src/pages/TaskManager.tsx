@@ -8,16 +8,19 @@ import {
   Circle,
   AlertCircle,
   X,
-  Loader2
+  Loader2,
+  Clock,
+  User,
+  CheckCircle
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { cn } from "../lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { useFirestore } from "../hooks/useFirestore";
 import { Task } from "../types/entities";
 import { useAuth } from "../contexts/AuthContext";
 import { useProject } from "../contexts/ProjectContext";
-import { where, orderBy } from "firebase/firestore";
+import { where, orderBy, limit } from "firebase/firestore";
 
 export default function TaskManager() {
   const [filter, setFilter] = useState("Todas");
@@ -36,13 +39,14 @@ export default function TaskManager() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.company_id) {
       const unsubscribe = getCollection([
-        orderBy("due_date", "asc")
+        orderBy("due_date", "asc"),
+        limit(100)
       ], currentProjectId || undefined);
       return () => unsubscribe();
     }
-  }, [user, getCollection, currentProjectId]);
+  }, [user, profile?.company_id, getCollection, currentProjectId]);
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,14 +78,14 @@ export default function TaskManager() {
     }
   };
 
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = useMemo(() => tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filter === "Todas" || 
                          (filter === "Pendentes" && task.status === "pending") ||
                          (filter === "Em curso" && task.status === "in_progress") ||
                          (filter === "Concluídas" && task.status === "completed");
     return matchesSearch && matchesFilter;
-  });
+  }), [tasks, search, filter]);
 
   return (
     <div className="space-y-8">

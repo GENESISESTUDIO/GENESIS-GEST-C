@@ -16,7 +16,7 @@ import {
   Lock,
   Users
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "../lib/utils";
 import { useFirestore } from "../hooks/useFirestore";
@@ -74,7 +74,7 @@ export default function TeamManagement() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.company_id) {
       const unsubWorkers = getWorkers([], currentProjectId || undefined);
       const unsubCollaborators = getCollaborators();
       const unsubProjects = getProjects();
@@ -84,11 +84,11 @@ export default function TeamManagement() {
         unsubProjects();
       };
     }
-  }, [user, currentProjectId, getWorkers, getCollaborators, getProjects]);
+  }, [user, profile?.company_id, currentProjectId, getWorkers, getCollaborators, getProjects]);
 
   const handleAddWorker = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !profile) return;
 
     await addWorker({
       ...newWorker,
@@ -126,17 +126,17 @@ export default function TeamManagement() {
     }
   };
 
-  const filteredWorkers = workers.filter(w => {
+  const filteredWorkers = useMemo(() => workers.filter(w => {
     const matchesSearch = w.full_name.toLowerCase().includes(search.toLowerCase()) ||
                          w.id_number.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filter === "Todas" || w.category === filter;
     return matchesSearch && matchesFilter;
-  });
+  }), [workers, search, filter]);
 
-  const filteredCollaborators = collaborators.filter(c => 
+  const filteredCollaborators = useMemo(() => collaborators.filter(c => 
     (c.displayName || "").toLowerCase().includes(search.toLowerCase()) ||
     (c.email || "").toLowerCase().includes(search.toLowerCase())
-  );
+  ), [collaborators, search]);
 
   return (
     <div className="space-y-8">

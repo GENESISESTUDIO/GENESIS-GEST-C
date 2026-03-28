@@ -16,7 +16,7 @@ import {
   Wrench,
   MoreVertical
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   BarChart, 
@@ -32,7 +32,7 @@ import { cn } from "../lib/utils";
 import { useFirestore } from "../hooks/useFirestore";
 import { useAuth } from "../contexts/AuthContext";
 import { useProject } from "../contexts/ProjectContext";
-import { orderBy } from "firebase/firestore";
+import { orderBy, limit } from "firebase/firestore";
 
 interface Equipment {
   id?: string;
@@ -68,13 +68,14 @@ export default function Equipment() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.company_id) {
       const unsubscribe = getCollection([
-        orderBy("name", "asc")
+        orderBy("name", "asc"),
+        limit(100)
       ], currentProjectId || undefined);
       return () => unsubscribe();
     }
-  }, [user, getCollection, currentProjectId]);
+  }, [user, profile?.company_id, getCollection, currentProjectId]);
 
   const handleAddEquipment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,27 +100,27 @@ export default function Equipment() {
     });
   };
 
-  const stats = [
+  const stats = useMemo(() => [
     { label: "Total Frota", value: equipmentList.length, icon: Truck, color: "blue" },
     { label: "Operacionais", value: equipmentList.filter(e => e.status === "Operacional").length, icon: CheckCircle2, color: "emerald" },
     { label: "Em Manutenção", value: equipmentList.filter(e => e.status === "Em Manutenção").length, icon: Wrench, color: "amber" },
     { label: "Críticos", value: equipmentList.filter(e => e.status === "Avariado").length, icon: AlertTriangle, color: "red" },
-  ];
+  ], [equipmentList]);
 
-  const chartData = [
+  const chartData = useMemo(() => [
     { name: 'Pesados', value: equipmentList.filter(e => e.type === "Pesado").length },
     { name: 'Transporte', value: equipmentList.filter(e => e.type === "Transporte").length },
     { name: 'Energia', value: equipmentList.filter(e => e.type === "Energia").length },
     { name: 'Outros', value: equipmentList.filter(e => !["Pesado", "Transporte", "Energia"].includes(e.type)).length },
-  ];
+  ], [equipmentList]);
 
-  const filteredEquipment = equipmentList.filter(e => {
+  const filteredEquipment = useMemo(() => equipmentList.filter(e => {
     const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
                          e.type.toLowerCase().includes(search.toLowerCase()) ||
                          e.location.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filter === "Todos" || e.type === filter;
     return matchesSearch && matchesFilter;
-  });
+  }), [equipmentList, search, filter]);
 
   return (
     <div className="space-y-8">

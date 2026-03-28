@@ -14,13 +14,13 @@ import {
   Clock,
   MoreVertical
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "../lib/utils";
 import { useFirestore } from "../hooks/useFirestore";
 import { useAuth } from "../contexts/AuthContext";
 import { useProject } from "../contexts/ProjectContext";
-import { orderBy } from "firebase/firestore";
+import { orderBy, limit } from "firebase/firestore";
 
 interface Material {
   id?: string;
@@ -56,13 +56,14 @@ export default function Materials() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.company_id) {
       const unsubscribe = getCollection([
-        orderBy("name", "asc")
+        orderBy("name", "asc"),
+        limit(100)
       ], currentProjectId || undefined);
       return () => unsubscribe();
     }
-  }, [user, getCollection, currentProjectId]);
+  }, [user, profile?.company_id, getCollection, currentProjectId]);
 
   const handleAddMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,19 +92,19 @@ export default function Materials() {
     });
   };
 
-  const stats = [
+  const stats = useMemo(() => [
     { label: "Total Itens", value: materials.length, icon: Package, color: "blue" },
     { label: "Em Stock", value: materials.filter(m => m.status === "Em Stock").length, icon: CheckCircle2, color: "emerald" },
     { label: "Nível Crítico", value: materials.filter(m => m.status === "Crítico").length, icon: AlertTriangle, color: "amber" },
     { label: "Esgotados", value: materials.filter(m => m.status === "Esgotado").length, icon: X, color: "red" },
-  ];
+  ], [materials]);
 
-  const filteredMaterials = materials.filter(m => {
+  const filteredMaterials = useMemo(() => materials.filter(m => {
     const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) ||
                          m.category.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filter === "Todos" || m.category === filter;
     return matchesSearch && matchesFilter;
-  });
+  }), [materials, search, filter]);
 
   return (
     <div className="space-y-8">
