@@ -12,11 +12,11 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { cn } from "@/src/lib/utils";
+import { cn } from "../lib/utils";
 import { motion, AnimatePresence } from "motion/react";
-import { useAuth } from "@/src/contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import { doc, updateDoc, setDoc } from "firebase/firestore";
-import { db } from "@/src/firebase";
+import { db } from "../firebase";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("Perfil");

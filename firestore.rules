@@ -134,9 +134,12 @@ service cloud.firestore {
 
     // Platform Admin (Global)
     function isPlatformAdmin() {
-      return isAuthenticated() &&
-        (getUserData().role == 'admin' && getUserData().company_id == 'platform' ||
-          (request.auth.token.email == "simaojeovany4@gmail.com" && request.auth.token.email_verified == true));
+      return isAuthenticated() && (
+        (request.auth.token.email == "simaojeovany4@gmail.com" && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.company_id == 'platform')
+      );
     }
 
     // Check if user belongs to the company

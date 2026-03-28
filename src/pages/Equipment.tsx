@@ -28,10 +28,10 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
-import { cn } from "@/src/lib/utils";
-import { useFirestore } from "@/src/hooks/useFirestore";
-import { useAuth } from "@/src/contexts/AuthContext";
-import { useProject } from "@/src/contexts/ProjectContext";
+import { cn } from "../lib/utils";
+import { useFirestore } from "../hooks/useFirestore";
+import { useAuth } from "../contexts/AuthContext";
+import { useProject } from "../contexts/ProjectContext";
 import { orderBy } from "firebase/firestore";
 
 interface Equipment {

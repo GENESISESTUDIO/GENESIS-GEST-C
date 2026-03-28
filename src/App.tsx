@@ -1,17 +1,17 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Layout from "@/src/components/Layout";
-import Dashboard from "@/src/pages/Dashboard";
-import TaskManager from "@/src/pages/TaskManager";
-import ProjectList from "@/src/pages/ProjectList";
-import ReportList from "@/src/pages/ReportList";
-import TeamManagement from "@/src/pages/TeamManagement";
-import Equipment from "@/src/pages/Equipment";
-import Materials from "@/src/pages/Materials";
-import Financial from "@/src/pages/Financial";
-import Issues from "@/src/pages/Issues";
-import Settings from "@/src/pages/Settings";
-import { AuthProvider } from "@/src/contexts/AuthContext";
-import { ProjectProvider } from "@/src/contexts/ProjectContext";
+import Layout from "./components/Layout";
+import Dashboard from "./pages/Dashboard";
+import TaskManager from "./pages/TaskManager";
+import ProjectList from "./pages/ProjectList";
+import ReportList from "./pages/ReportList";
+import TeamManagement from "./pages/TeamManagement";
+import Equipment from "./pages/Equipment";
+import Materials from "./pages/Materials";
+import Financial from "./pages/Financial";
+import Issues from "./pages/Issues";
+import Settings from "./pages/Settings";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProjectProvider } from "./contexts/ProjectContext";
 
 export default function App() {
   return (

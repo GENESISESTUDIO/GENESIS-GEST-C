@@ -28,13 +28,13 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { cn } from "@/src/lib/utils";
+import { cn } from "../lib/utils";
 import { motion, AnimatePresence } from "motion/react";
-import { useAuth } from "@/src/contexts/AuthContext";
-import { useProject } from "@/src/contexts/ProjectContext";
-import { useFirestore } from "@/src/hooks/useFirestore";
-import { signInWithGoogle, signOut } from "@/src/firebase";
-import GenesisAI from "@/src/components/GenesisAI";
+import { useAuth } from "../contexts/AuthContext";
+import { useProject } from "../contexts/ProjectContext";
+import { useFirestore } from "../hooks/useFirestore";
+import { signInWithGoogle, signOut } from "../firebase";
+import GenesisAI from "./GenesisAI";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", permission: "dashboard" },

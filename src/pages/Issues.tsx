@@ -15,11 +15,11 @@ import {
   Loader2
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { cn } from "@/src/lib/utils";
+import { cn } from "../lib/utils";
 import { motion, AnimatePresence } from "motion/react";
-import { useFirestore } from "@/src/hooks/useFirestore";
-import { useAuth } from "@/src/contexts/AuthContext";
-import { useProject } from "@/src/contexts/ProjectContext";
+import { useFirestore } from "../hooks/useFirestore";
+import { useAuth } from "../contexts/AuthContext";
+import { useProject } from "../contexts/ProjectContext";
 import { orderBy } from "firebase/firestore";
 
 interface Issue {
