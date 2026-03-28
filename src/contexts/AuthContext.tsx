@@ -70,6 +70,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const isPlatformAdmin = firebaseUser.email === 'simaojeovany4@gmail.com';
               const defaultCompanyId = isPlatformAdmin ? 'genesis-cc-gest' : 'pending';
               const updates = { company_id: defaultCompanyId };
+              
+              // If it's the platform admin, also ensure the company document exists
+              if (isPlatformAdmin) {
+                const companyDocRef = doc(db, 'companies', defaultCompanyId);
+                const companyDoc = await getDoc(companyDocRef);
+                if (!companyDoc.exists()) {
+                  await setDoc(companyDocRef, {
+                    id: defaultCompanyId,
+                    name: 'GENESIS CC GEST',
+                    owner_uid: firebaseUser.uid,
+                    created_at: new Date().toISOString()
+                  });
+                }
+              }
+
               await setDoc(userDocRef, updates, { merge: true });
               setProfile({ ...data, ...updates });
             } else {
