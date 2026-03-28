@@ -34,7 +34,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { useProject } from "@/src/contexts/ProjectContext";
 import { useFirestore } from "@/src/hooks/useFirestore";
 import { signInWithGoogle, signOut } from "@/src/firebase";
-import GenesisAI from "./GenesisAI";
+import GenesisAI from "./GenesisAI.tsx";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", permission: "dashboard" },
